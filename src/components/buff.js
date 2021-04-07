@@ -1,24 +1,43 @@
 import React from 'react';
 // import {useState} from 'react';
 import db from '../db.js'
+import t from '../components/t.js'
 
 import { List,Popover,Button } from 'antd';
-// import t from './t.js'
+
+const ua = db.get('ua').value();
 
 const BuffButton = (props)=>{
-  const buffs = db.get('buffs').value()
   return(
-    <Popover content={
-      <List itemLayout="horizontal" dataSource={buffs}
-      renderItem={item=>
-        <List.Item>
-          <p>{item.name}</p>
-          <p>{item.describe}</p>
-        </List.Item>
-      }/>
-    }>
-      <Button>Buff查询</Button>
+    <Popover
+    trigger={ua==='mo'?'click':'hover'}
+    content={<BuffList></BuffList>}>
+      <Button>Buff</Button>
     </Popover>
   )
 }
-export {BuffButton}
+const BuffList = (props)=>{
+  const buffs = db.get('buffs').value()
+  const cellStyle = {
+    // width:'20%',
+    height:'32px',
+    fontSize: 16,
+    textAlign: 'flex-start',
+    paddingLeft:16,
+    fontWeight: 500,
+    borderWidth:'thin',
+    borderStyle:'solid solid solid solid',
+    borderColor:'gray',
+  }
+  return(
+    <table>
+      <tbody>
+      {buffs.map(buff=><tr key={buff.name}>
+        <td style={{...cellStyle}}>{t(buff.name)}</td>
+        <td style={{...cellStyle}}>{t(buff.describe)}</td>
+      </tr>)}
+      </tbody>
+    </table>
+    )
+}
+export {BuffButton,BuffList}

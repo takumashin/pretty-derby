@@ -2,9 +2,10 @@ import React,{useState} from 'react';
 import { Divider,Row,Col,Button,Checkbox,Modal,Tooltip,PageHeader,Switch,Input} from 'antd';
 
 import db from '../db.js'
+import t from '../components/t.js'
+
 import Support from './support.js'
 import Player from './player.js'
-import t from '../components/t.js'
 import {SkillButton} from '../components/skill.js'
 const CheckboxGroup = Checkbox.Group
 const { Search } = Input
@@ -49,24 +50,24 @@ const Skill = () =>{
     {label:'追',value:'＜作戦・追込＞'}
   ]
   const checkOptions2 =[
-    {label:'速度被动',value:'10011'},
-    {label:'耐力被动',value:'10021'},
-    {label:'力量被动',value:'10031'},
-    {label:'毅力被动',value:'10041'},
-    {label:'智力被动',value:'10051'},
-    {label:'速度提高',value:'20011'},
-    {label:'耐力恢复',value:'20021'},
+    {label:'速度被动(绿)',value:'10011'},
+    {label:'耐力被动(绿)',value:'10021'},
+    {label:'力量被动(绿)',value:'10031'},
+    {label:'毅力被动(绿)',value:'10041'},
+    {label:'智力被动(绿)',value:'10051'},
+    {label:'耐力恢复(蓝)',value:'20021'},
+    {label:'速度提高(黄)',value:'20011'},
     // {label:'20031',value:'20031'},
-    {label:'加速度提高',value:'20041'},
-    {label:'切换跑道',value:'20051'},
-    {label:'起步',value:'20061'},
+    {label:'加速度提高(黄)',value:'20041'},
+    {label:'切换跑道(黄)',value:'20051'},
+    {label:'起步(黄)',value:'20061'},
     // {label:'20071',value:'20071'},
     // {label:'20081',value:'20081'},
-    {label:'视野',value:'20091'},
-    {label:'降速(debuff)',value:'30011'},
-    {label:'安定(debuff)',value:'30041'},
-    {label:'疲劳(debuff)',value:'30051'},
-    {label:'视野(debuff)',value:'30071'}
+    {label:'视野(黄)',value:'20091'},
+    {label:'降速(红)',value:'30011'},
+    {label:'安定(红)',value:'30041'},
+    {label:'疲劳(红)',value:'30051'},
+    {label:'视野(红)',value:'30071'}
   ]
   const checkOptions3 = [
     {label:'普通',value:'ノーマル'},
@@ -77,7 +78,7 @@ const Skill = () =>{
   const onChange1=(checkedValues)=>{
     setCheckedList1(checkedValues)
     updateSkillList(checkedValues,checkedList2,checkedList3)
-    
+
   }
   const onChange2 = (checkedValues)=>{
     setCheckedList2(checkedValues)
@@ -194,14 +195,14 @@ const Skill = () =>{
   }
 
   const onSearch = (searchText) => {
-    const fullSkillList = allSkillList; 
+    const fullSkillList = allSkillList;
     const tempSkillList = fullSkillList.filter(item => (item.name).indexOf(searchText) > -1);
     setCheckedList1([])
     setCheckedList2([])
     setCheckedList3([])
     setSkillList(tempSkillList)
   };
-  
+
   const useViewport = () => {
     const [width, setWidth] = React.useState(window.innerWidth);
     const [height,setHeight] = React.useState(window.innerHeight);
@@ -210,33 +211,33 @@ const Skill = () =>{
       window.addEventListener("resize", handleWindowResize);
       return () => window.removeEventListener("resize", handleWindowResize);
     }, []);
-    console.log('currentWidth::',height);
     return {height};
   };
 
   const dynamicListHeight = useViewport().height - 128 - 90;
+
   return(<>
     <div style={{display:'flex',justifyContent:'center',paddingTop:40}}>
       <div style={{maxWidth:800}}>
         <Row>
-          <Col span={6}><div style={{...headerStyle}}><text style={{...headerTextStyle}}>筛选</text></div></Col>
-          <Col span={18}><div style={{...headerStyle}}><text style={{...headerTextStyle}}>技能列表</text></div></Col>
+          <Col span={6}><div style={{...headerStyle}}><text style={{...headerTextStyle}}>{t('筛选')}</text></div></Col>
+          <Col span={18}><div style={{...headerStyle}}><text style={{...headerTextStyle}}>{t('技能列表')}</text></div></Col>
           <Col span={6}>
             <div style={{height:dynamicListHeight,overflowY:'scroll',display:'flex',flexDirection:'column'}}>
               <div style={{height:16}}/>
-              <Button type={'danger'} onClick={resetCheckbox} style={{width:'100%'}}>重置</Button>
+              <Button type={'danger'} onClick={resetCheckbox} style={{width:'100%'}}>{t('重置')}</Button>
               <Divider/>
               <div>
-                <Tooltip title="可以在支援卡页面配置">
-                <span style={{ margin: '0 10px 0 0',lineHeight: '32px'}}>显示拥有支援卡</span>
+                <Tooltip title={t("可以在支援卡页面配置")}>
+                <span style={{ margin: '0 10px 0 0',lineHeight: '32px'}}>{t('显示拥有支援卡')}</span>
                   <Switch checked={mode} onChange={changeMode} />
                 </Tooltip>
               </div>
               <div>
-                <span style={{ margin: '0 10px 0 0',lineHeight: '32px'}}>技能搜索</span>
+                <span style={{ margin: '0 10px 0 0',lineHeight: '32px'}}>{t('技能搜索')}</span>
                 <Search
-                  placeholder="输入技能名称"
-                  enterButton="搜索"
+                  placeholder={t("输入技能名称")}
+                  enterButton={t("搜索")}
                   size="middle"
                   style={{ width: '100%' }}
                   onSearch={onSearch}
@@ -263,16 +264,13 @@ const Skill = () =>{
                   }
                   <Modal visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} width={'80%'}>
                     <PageHeader title={skillName}>{t(skillName)}</PageHeader>
-                    <Support supportList={skillSupportList} ></Support>
+                    <Support supportList={skillSupportList} filter={false}></Support>
                     <Player playerList={skillPlayerList} ></Player>
                   </Modal>
                 </Row>
               )}
             </div>
           </Col>
-
-
-
         </Row>
       </div>
     </div>

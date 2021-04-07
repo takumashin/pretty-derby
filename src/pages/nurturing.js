@@ -1,12 +1,14 @@
 import React,{useState} from 'react';
 import shortid from 'shortid'
 import db from '../db.js'
+import t from '../components/t.js'
 
 import { Divider,Row,Col,Modal,Button,Drawer,Table, Popover,Popconfirm} from 'antd';
 
 import {EventList} from '../components/event.js'
 import {SkillList} from '../components/skill.js'
 import {BuffButton} from '../components/buff.js'
+import {RaceSchedule,RaceTimeline} from '../components/race.js'
 
 import Race from './race.js'
 import Player from './player.js'
@@ -14,7 +16,7 @@ import Support from './support.js'
 
 const {Column} = Table
 
-const cdnServer = 'https://cdn.jsdelivr.net/gh/wrrwrr111/pretty-derby/public/'
+const cdnServer = 'https://cdn.jsdelivr.net/gh/wrrwrr111/pretty-derby@master/public/'
 
 
 const NurturingSupport = (props)=>{
@@ -32,36 +34,7 @@ const NurturingSupport = (props)=>{
     </Row>
   )
 }
-// 培育界面 马娘赛程
-const RaceList = (props) =>{
-  return (
-    <Row className={'race-row'}>
-      {
-        props.raceList.map((race,index)=>{
-          // 忽略出道战
-          if(race[1][2]){
-            return(
-          <Col span={12} key={index}>
-            <Row className={'race-row-'+index%4}>
-              <Col span={4} className={'race-name'} >
-                <p>{race[0]}</p>
-              </Col>
-              <Col span = {20} className={'race-detail'}>
-              {race[1].map((item,index)=>
-                  <p key={index}>{item}</p>
-                  )}
-              </Col>
-            </Row>
-          </Col>
-            )
-          }else{
-            return null
-          }
-        }
-      )}
-    </Row>
-  )
-}
+
 
 const Nurturing = () =>{
   const [needSelect,setNeedSelect] = useState(false)
@@ -75,10 +48,9 @@ const Nurturing = () =>{
   const selected = db.get('selected').value()
   const [supports, setSupports] = useState(selected.supports);
   const [player, setPlayer] = useState(selected.player);
-  const [races,setRaces] = useState(selected.races)
+  const [filterRace,setFilterRace] = useState(selected.filterRace||[])
 
   const [decks,setDecks] = useState(db.get('myDecks').value())
-  const [visible, setVisible] = useState(false);
 
 
 
@@ -129,18 +101,13 @@ const Nurturing = () =>{
     setIsRaceVisible(false);
   };
   const handleSelectRace = (data)=>{
-    setRaces(data);
+    setFilterRace(data);
 
     // save
-    selected.races = data
+    selected.filterRace = data
     db.get('selected').assign(selected).write()
   }
-  const showDrawer = ()=>{
-    setVisible(true)
-  }
-  const onDrawerClose = (data)=>{
-    setVisible(false)
-  }
+
 
   // 卡组相关操作
   const saveDeck = (deck)=>{
@@ -190,18 +157,29 @@ const Nurturing = () =>{
     setDecks([...db.get('myDecks').value()])
   }
 
+  const useViewport = () => {
+    const [width, setWidth] = React.useState(window.innerWidth);
+    const [height,setHeight] = React.useState(window.innerHeight);
+    React.useEffect(() => {
+      const handleWindowResize = () => setHeight(window.innerHeight);
+      window.addEventListener("resize", handleWindowResize);
+      return () => window.removeEventListener("resize", handleWindowResize);
+    }, []);
+    console.log('currentWidth::',height);
+    return {height};
+  };
 
+  const dynamicContentHeight = useViewport().height -128
   return(
     <Row className='nurturing-box' gutter={[32,8]}>
 
-      <Col sm={7} xs={24}>
-        <Button type={'primary'} onClick={showPlayer}>选择马娘</Button>
-        <Button onClick={showSupport2}>支援卡查询</Button>
-        <Button onClick={showRace}>选择关注赛事</Button>
-        <Button onClick={showDrawer}>查看关注赛事</Button>
+      <Col span={9} style={{height:dynamicContentHeight,overflowY:'auto'}}>
+        <Button type={'primary'} onClick={showPlayer}>{t('选择马娘')}</Button>
+        <Button onClick={showSupport2}>{t('支援卡查询')}</Button>
+        <Button onClick={showRace}>{t('选择关注赛事')}</Button>
         <Popover width={'100%'} content={
           <>
-            <Button onClick={()=>saveDeck()}>保存为新卡组</Button>
+            <Button onClick={()=>saveDeck()}>{t('保存为新卡组')}</Button>
             {decks.map(deck=>
               <Row key={deck.id}>
                 {deck.imgUrls.map(imgUrl=>
@@ -210,18 +188,18 @@ const Nurturing = () =>{
                   </Col>
                 )}
                 <Col span={3}>
-                  <Button type="primary" onClick={()=>loadDeck(deck)}>读取卡组</Button>
+                  <Button type="primary" onClick={()=>loadDeck(deck)}>{t('读取卡组')}</Button>
                   <Popconfirm title="确认覆盖？" onConfirm={()=>saveDeck(deck)}>
-                    <Button danger type="dashed">覆盖卡组</Button>
+                    <Button danger type="dashed">{t('覆盖卡组')}</Button>
                   </Popconfirm>
                   <Popconfirm title="确认删除？" onConfirm={()=>deleteDeck(deck)}>
-                    <Button danger type="dashed">删除卡组</Button>
+                    <Button danger type="dashed">{t('删除卡组')}</Button>
                   </Popconfirm>
                 </Col>
               </Row>
             )}
           </>
-        }><Button>卡组</Button></Popover>
+        }><Button>{t('我的卡组')}</Button></Popover>
         <BuffButton></BuffButton>
         <Divider></Divider>
         <Row>
@@ -233,35 +211,17 @@ const Nurturing = () =>{
           </Col>
         </Row>
         <Divider></Divider>
-        <RaceList raceList={player.id?player.raceList:[]}></RaceList>
-        <Drawer
-        title="关注赛事"
-        onClose={onDrawerClose}
-        visible={visible}
-        getContainer={false}
-        style={{ position: 'absolute' }}
-        closable={true}
-        placement="left"
-        mask={true}
-        maskClosable={true}
-        width={'95%'}
-      >
-        <Table dataSource={races} pagination={false}>
-          <Column title="名称" dataIndex="name" key="name" />
-          <Column title="时间" dataIndex="date" key="date" />
-          <Column title="级别" dataIndex="grade" key="grade" />
-          <Column title="类型" dataIndex="distanceType" key="distanceType" />
-        </Table>
-      </Drawer>
-      {player.id&&
+      {player.id&&<>
           <EventList eventList={player.eventList} pid={player.id}></EventList>
-        }
+          <Divider style={{margin:'4px 0'}}>{t('比赛')}</Divider>
+          <RaceTimeline raceList={player.raceList} filterRace={filterRace}></RaceTimeline>
+        </>}
       </Col>
-      <Col sm={17} xs={24}>
+      <Col sm={15} xs={24}>
         <Row gutter={[16,16]}>
         {[0,1,2,3,4,5].map(index=>
           <Col sm={8} xs={24} key={index}>
-            <Button onClick={()=>showSupport(index)}>选择支援卡</Button>
+            <Button onClick={()=>showSupport(index)}>{t('选择支援卡')}</Button>
             {supports[index]&&supports[index].id &&<NurturingSupport data={supports[index]} ></NurturingSupport>}
           </Col>
         )}
