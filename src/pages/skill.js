@@ -1,63 +1,22 @@
 import React,{useState} from 'react';
-import { Divider,Row,Col,Button,Checkbox,Modal,Tooltip,PageHeader,Switch,Input} from 'antd';
+import { Divider,Row,Col} from 'antd';
 
 import db from '../db.js'
 import t from '../components/t.js'
 
-import Support from './support.js'
-import Player from './player.js'
-import {SkillButton,SkillCheckbox} from '../components/skill.js'
-const { Search } = Input
+import {SkillButton,SkillCheckbox} from '../components/skill-detail.js'
+// const { Search } = Input
 // const cdnServer = 'https://cdn.jsdelivr.net/gh/wrrwrr111/pretty-derby/public/'
+const ua = db.get('ua').value();
 
-const Skill = () =>{
+const Skill = (props) =>{
   // 所有技能列表
   const allSkillList = db.get('skills').orderBy('db_id').value()
-  const allSupportList = db.get('supports').value()
-  const allPlayerList = db.get('players').value()
 
   const [skillList,setSkillList] = useState(allSkillList)
-  const [skillSupportList,setSkillSupportList] = useState(allSupportList)
-  const [skillPlayerList,setSkillPlayerList] = useState(allPlayerList)
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  // 点击技能出现的弹框标题
-  const [skillName, setSkillName] = useState('');
 
   // init supportMode
   localStorage.getItem('supportMode')===null&&localStorage.setItem('supportMode',0)
-
-  const showModal = (skill) => {
-    let tempSupportList = allSupportList.filter(support=>{
-      let flag = 0;
-      support.skillList.forEach(id=>{
-        if (id===skill.id){
-          flag = 1
-        }
-      })
-      return flag
-    })
-    let tempPlayerList = allPlayerList.filter(player=>{
-      let flag = 0;
-      player.skillList.forEach(id=>{
-        if (id===skill.id){
-          flag = 1
-        }
-      })
-      return flag
-    })
-    setSkillName(skill.name)
-    setSkillSupportList(tempSupportList)
-    setSkillPlayerList(tempPlayerList)
-    setIsModalVisible(true);
-  };
-
-  const handleOk = () => {
-    setIsModalVisible(false);
-  };
-
-  const handleCancel = () => {
-    setIsModalVisible(false);
-  };
 
   const rareLabel={'ノーマル':'普通','レア':'金色 稀有','固有':'独特'}
 
@@ -77,7 +36,6 @@ const Skill = () =>{
     color:'#f5f5f5',
     textShadow: "0 2px #33333370",
   }
-
 
   const onSkillCheckboxUpdate = (skillList)=>{
     setSkillList(skillList)
@@ -114,16 +72,10 @@ const Skill = () =>{
                 <Row gutter={[8,8]} key={rare}>
                   <Divider>{rareLabel[rare]}</Divider>
                   { skillList.filter(item=>item.rare === rare).map(skill=>
-                    <Col  xxl={6} lg={8} sm={12} xs={12}>
-                      <SkillButton usedInList={true} skill={skill} key={skill.id} onClick={showModal}></SkillButton>
+                    <Col  xxl={6} lg={6} sm={12} xs={12}>
+                      <SkillButton usedInList={true} skill={skill} key={skill.id}></SkillButton>
                     </Col>
-                  )
-                  }
-                  <Modal visible={isModalVisible} onOk={handleOk} onCancel={handleCancel} width={'80%'}>
-                    <PageHeader title={skillName}>{t(skillName)}</PageHeader>
-                    <Support supportList={skillSupportList} filter={false}></Support>
-                    <Player playerList={skillPlayerList} ></Player>
-                  </Modal>
+                  )}
                 </Row>
               )}
             </div>

@@ -2,20 +2,25 @@ import React,{useState} from 'react';
 import shortid from 'shortid'
 import db from '../db.js'
 import t from '../components/t.js'
-import { Divider,Row,Col,Modal,Button,Drawer,Table, Popover,Popconfirm,Tooltip} from 'antd';
+import axios from "axios";
+
+import { Divider,Row,Col,Modal,Button,Drawer,message, Popover,Popconfirm,Tooltip} from 'antd';
 import {EditOutlined} from '@ant-design/icons'
 
 import ScrollBars from 'react-custom-scrollbars'
 
 import {EventList} from '../components/event.js'
-import {SkillList} from '../components/skill.js'
+import {SkillList} from '../components/skill-detail.js'
 import {BuffButton} from '../components/buff.js'
 import {RaceSchedule,RaceTimeline,RaceCheckbox} from '../components/race.js'
+import {MyDecks,RecommendDecks} from '../components/deck.js'
 
-
+import GridLayout from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css'
 import Race from './race.js'
 import Player from './player.js'
 import Support from './support.js'
+import Checkbox from 'antd/lib/checkbox/Checkbox';
 
 
 const cdnServer = 'https://cdn.jsdelivr.net/gh/wrrwrr111/pretty-derby@master/public/'
@@ -40,8 +45,6 @@ const Nurturing = () =>{
     ground:[]})
   const [filterRace,setFilterRace] = useState(selected.filterRace||{})
 
-  const [decks,setDecks] = useState(db.get('myDecks').value())
-
   const showPlayer = () => {
     setIsPlayerVisible(true);
   };
@@ -51,8 +54,7 @@ const Nurturing = () =>{
   const handleSelectPlayer = (data)=>{
     setIsPlayerVisible(false);
     setPlayer(data)
-
-    // save
+    // save player
     selected.player = data
     db.get('selected').assign(selected).write()
   }
@@ -82,35 +84,6 @@ const Nurturing = () =>{
     db.get('selected').assign(selected).write()
   }
 
-
-  // 卡组相关操作
-  const saveDeck = (deck)=>{
-    let tmpDeck = {
-      imgUrls:[],
-      supportsId:[],
-    }
-    if(player.id){
-      tmpDeck.playerId = player.id
-      tmpDeck.imgUrls.push(player.imgUrl)
-    }
-    [0,1,2,3,4,5].forEach(index=>{
-      if(supports[index]&&supports[index].id){
-        tmpDeck.imgUrls.push(supports[index].imgUrl)
-        tmpDeck.supportsId.push(supports[index].id)
-      }else{
-        tmpDeck.supportsId.push(null)
-      }
-    })
-    if(deck){
-      //update
-      db.get('myDecks').find({id:deck.id}).assign(tmpDeck).write()
-    }else{
-      //
-      tmpDeck.id = shortid.generate()
-      db.get('myDecks').push(tmpDeck).write()
-    }
-    setDecks([...db.get('myDecks').value()])
-  }
   const loadDeck = (deck)=>{
     selected.supports={0:{},1:{},2:{},3:{},4:{},5:{}}
     selected.player={}
@@ -126,10 +99,10 @@ const Nurturing = () =>{
     setSupports({...selected.supports})
     db.get('selected').assign(selected).write()
   }
-  const deleteDeck = (deck)=>{
-    db.get('myDecks').remove({id:deck.id}).write()
-    setDecks([...db.get('myDecks').value()])
-  }
+
+
+
+
 
   // race checkbox发生变化
   const onChangeRace = (filterCondition)=>{
@@ -177,134 +150,150 @@ const Nurturing = () =>{
   const dynamicCardWidth = Math.floor(dynamicCardHeight * 3 / 4)
   const dynamicCardBoxWidth = dynamicCardWidth * 3
 
-  return(
-    <div style={{display:'flex',justifyContent:'center'}}>
-      <div  style={{flex:'1 1 auto',height:dynamicContentHeight}}>
-        <div style={{display:'flex',justifyContent:'center'}}>
-            {player.id?
-              <img src={cdnServer+player.imgUrl} alt={player.imgUrl}
-              width={0.12*dynamicContentHeight} height={0.131*dynamicContentHeight}
-                    style={{float:'left',marginRight:'8px'}} onClick={showPlayer}></img>
-              :<Button className='add-player' type={'primary'} onClick={showPlayer}>{t('选择马娘')}</Button>
-            }
-            <Row>
+  const dynamicRowHeight = Math.floor((useViewport().height -128-40)/18)
 
-            <Button onClick={showSupport2}>{t('支援卡查询')}</Button>
-            <BuffButton/>
+  const layoutWithBlank=[
+    {i: 'a', x: 0, y: 0, w: 2, h: 2},
+    {i: 'b', x: 2, y: 0, w: 7, h: 2},
+    {i: 'c', x: 0, y: 2, w: 9, h: 7},
+    {i: 'd', x: 0, y: 10, w: 4, h: 4},
+    {i: 'e', x: 4, y: 10, w: 5, h: 7},
+    {i: 'f', x: 0, y: 14, w: 4, h: 3},
+    // {i: 'w', x: 5, y: 10, w: 6, h: 7},
+    {i: 's0', x: 17, y: 0, w: 5, h: 8},
+    {i: 's1', x: 22, y: 0, w: 5, h: 8},
+    {i: 's2', x: 27, y: 0, w: 5, h: 8},
+    {i: 's3', x: 17, y: 9, w: 5, h: 8},
+    {i: 's4', x: 22, y: 9, w: 5, h: 8},
+    {i: 's5', x: 27, y: 9, w: 5, h: 8},
+  ]
+  const layoutWithoutBlank=[
+    {i: 'a', x: 0, y: 0, w: 2, h: 2},
+    {i: 'b', x: 2, y: 0, w: 9, h: 2},
+    {i: 'c', x: 0, y: 2, w: 11, h: 7},
+    {i: 'd', x: 0, y: 10, w: 5, h: 4},
+    {i: 'e', x: 5, y: 10, w: 6, h: 7},
+    {i: 'f', x: 0, y: 14, w: 5, h: 3},
+    // {i: 'w', x: 5, y: 10, w: 6, h: 7},
+    {i: 's0', x: 11 , y: 0, w: 7, h: 8},
+    {i: 's1', x: 18, y: 0, w: 7, h: 8},
+    {i: 's2', x: 25, y: 0, w: 7, h: 8},
+    {i: 's3', x: 11, y: 9, w: 7, h: 8},
+    {i: 's4', x: 18, y: 9, w: 7, h: 8},
+    {i: 's5', x: 25, y: 9, w: 7, h: 8},
+  ]
+  const originalLayout = db.get('layout').value()||layoutWithoutBlank
+  const [layout,setLayout]=useState(originalLayout)
+  const onLayoutChange=(layout)=> {
+    /*eslint no-console: 0*/
+    db.set('layout',layout).write()
+    setLayout(layout)
+    // onLayoutChange(layout); // updates status display
+  }
+  const panelStyle = {
+    borderRadius:16,
+    backgroundColor:'white',
+  }
+  const headStyle = {
+    width:'100%',
+    textAlign:'center',
+    backgroundColor:'#ccc',
+    cursor:'move'
+  }
+  const pBodyStyle={
+    height:'calc(100% - 22px)'
+  }
+  return(<>
+    <GridLayout cols={32} layout={layout}
+    draggableCancel='.panel-title' draggableHandle='.panel-heading'
+      rowHeight={dynamicRowHeight} width={useViewport().width-10}
+      onLayoutChange={onLayoutChange}>
 
-            <Popover content={<RaceCheckbox onChange={onChangeRace} raceFilterCondition={raceFilterCondition}></RaceCheckbox>}>
-              <Button>{t('比赛')}</Button>
-            </Popover>
-
-            <Popover width={'100%'} content={
-              <>
-                <Button onClick={()=>saveDeck()}>{t('保存为新卡组')}</Button>
-                {decks.map(deck=>
-                  <Row key={deck.id}>
-                    {deck.imgUrls.map(imgUrl=>
-                      <Col span={3} key={imgUrl}>
-                        <img src={cdnServer+imgUrl} alt={imgUrl} width={'100'}></img>
-                      </Col>
-                    )}
-                    <Col span={3}>
-                      <Button type="primary" onClick={()=>loadDeck(deck)}>{t('读取卡组')}</Button>
-                      <Popconfirm title={t("确认覆盖？")} onConfirm={()=>saveDeck(deck)}>
-                        <Button danger type="dashed">{t('覆盖卡组')}</Button>
-                      </Popconfirm>
-                      <Popconfirm title={t("确认删除？")} onConfirm={()=>deleteDeck(deck)}>
-                        <Button danger type="dashed">{t('删除卡组')}</Button>
-                      </Popconfirm>
-                    </Col>
-                  </Row>
-                )}
-              </>
-            }><Button>{t('我的卡组')}</Button></Popover>
-          </Row>
-        </div>
-
-        {player.id&&
-        <Row gutter={4}>
-          <Col span={24}>
-            <Divider style={{margin:'8px 0'}}>{t('事件')}</Divider>
-            <div style={{height:0.28*dynamicContentHeight,overflowX:'hidden',padding:8}}>
-              <ScrollBars autoHide={true} style={{backgroundColor:'white',borderRadius:16}}>
-                <EventList eventList={player.eventList} pid={player.id} type={'multi'}></EventList>
-              </ScrollBars>
-            </div>
-          </Col>
-          <Col span={12}>
-            <Divider style={{margin:'4px 0'}}>{t('技能')}</Divider>
-            <div style={{height:0.54*dynamicContentHeight,overflow:'hidden',padding:8}}>
-              <ScrollBars autoHide={true} style={{backgroundColor:'white',borderRadius:16}}>
-                <div style={{ height: 16 }}/>
-                <SkillList skillList={player.skillList}></SkillList>
-              </ScrollBars>
-            </div>
-          </Col>
-          <Col span={12}>
-            <Divider style={{margin:'4px 0'}}>{t('比赛')}</Divider>
-            <div style={{height:0.54*dynamicContentHeight,overflow:'hidden',padding:8}}>
-              <ScrollBars autoHide={true} style={{backgroundColor:'white',borderRadius:16}}>
-                <div style={{ height: 16 }}/>
-                <RaceTimeline raceList={player.raceList} filterRace={filterRace}></RaceTimeline>
-              </ScrollBars>
-            </div>
-          </Col>
-        </Row>
-        }
+      <div key='a' style={{...panelStyle}}>
+        <div className='panel-heading' style={{...headStyle}}>{t('角色')}</div>
+          {player.id&&
+            <img src={cdnServer+player.imgUrl} alt={player.imgUrl}
+            style={{...pBodyStyle}}  onClick={showPlayer}>
+          </img>}
       </div>
-
-      <div style={{flex:`0 0 ${dynamicCardBoxWidth}px`,display:'flex',flexWrap:'wrap'}}>
-        {[0,1,2,3,4,5].map(index=>
-          supports[index]&&supports[index].id?
-            <div key={index} style={{
-              width:dynamicCardWidth,
-              height:dynamicCardHeight,
-              backgroundImage:`url(${cdnServer+supports[index].imgUrl})`,
-              backgroundRepeat:'no-repeat',
-              backgroundSize:'cover'}}>
-              <div style={{
-                backgroundColor:'rgba(0,0,0,0.2)',
-                height:'100%',
-                padding:'2%',
-                display:'flex',
-                flexDirection:'column',
-                justifyContent:'space-between',
-                alignItems:'center'
-              }}>
+      <div key='b' style={{...panelStyle}}>
+        <div className='panel-heading' style={{...headStyle}}>{t('操作')}</div>
+        <Button className='add-player' type={'primary'} onClick={showPlayer}>{t('选择马娘')}</Button>
+        <Button onClick={showSupport2}>{t('支援卡查询')}</Button>
+        <BuffButton/>
+        <Popover content={<RaceCheckbox onChange={onChangeRace} raceFilterCondition={raceFilterCondition}></RaceCheckbox>}>
+          <Button>{t('比赛')}</Button>
+        </Popover>
+        <MyDecks player={player} supports={supports} loadDeck={loadDeck}></MyDecks>
+        <RecommendDecks player={player} loadDeck={loadDeck}></RecommendDecks>
 
 
-                <ScrollBars style={{height:'100%',marginBottom:'4%'}} autoHide>
-                  <div style={{paddingLeft:'2%',width:'98%'}}>
-                    <div style={{display:'flex'}}>
-                      <Tooltip title={t('选择支援卡')}>
-                        <Button shape="circle" icon={<EditOutlined />} onClick={()=>showSupport(index)}/>
-                      </Tooltip>
-                      <div style={{flex:'1 1 auto'}}>
-                        <Divider style={{margin:'4px 0',background:'rgba(255,255,255,0.6)'}}>事件</Divider>
-                      </div>
-                    </div>
-                    <EventList eventList={supports[index].eventList} pid={supports[index].id} type='multi'></EventList>
-                    {/* <SkillList skillList={[...new Set(supports[index].skillList)]} ></SkillList> */}
-                    <Divider style={{margin:'4px 0',background:'rgba(255,255,255,0.6)'}}>培训技能</Divider>
-                    <SkillList skillList={supports[index].possessionSkill}></SkillList>
-                    <Divider style={{margin:'4px 0',background:'rgba(255,255,255,0.6)'}}>事件技能</Divider>
-                    <SkillList skillList={supports[index].trainingEventSkill}></SkillList>
-                  </div>
-                </ScrollBars>
+        <Button onClick={()=>setLayout(layoutWithBlank)}>{t('初始化布局(有留白)')}</Button>
+        <Button onClick={()=>setLayout(layoutWithoutBlank)}>{t('初始化布局(无留白)')}</Button>
+      </div>
+      <div key='c'  style={{...panelStyle}}>
+        <div className='panel-heading' style={{...headStyle}}>{t('事件')}</div>
+        <ScrollBars autoHide={true} style={{...pBodyStyle}}>
+          {/* <p>{player.id}</p> */}
+          <EventList eventList={player.eventList||[]} pid={player.id}></EventList>
+        </ScrollBars>
+      </div>
+      <div key='d' style={{...panelStyle}}>
+        <div className='panel-heading' style={{...headStyle}}>{t('技能')}</div>
+        <ScrollBars autoHide={true} style={{...pBodyStyle}}>
+          <SkillList skillList={player.skillList||[]} isNur={true}></SkillList>
+        </ScrollBars>
+      </div>
+      <div key='e' style={{...panelStyle}}>
+        <div className='panel-heading' style={{...headStyle}}>{t('比赛')}</div>
+        <ScrollBars autoHide={true} style={{...pBodyStyle}}>
+          <RaceTimeline raceList={player.raceList||[]} filterRace={filterRace}></RaceTimeline>
+        </ScrollBars>
+      </div>
+      <div key='f' style={{...panelStyle}}>
+        <div className='panel-heading' style={{...headStyle}}>{t('隐藏事件')}</div>
+        <ScrollBars autoHide={true} style={{...pBodyStyle}}>
+          <EventList eventList={player.hideEvent||[]} pid={player.id} type='all'></EventList>
+        </ScrollBars>
+      </div>
+        {[0,1,2,3,4,5].map(index=>{
+          let support = supports[index];
+          if(support.id){
+            return (
+            <div key={`s${index}`} style={{...panelStyle}}>
+              <div className='panel-heading' style={{...headStyle}}>
+                <span className='panel-title' onClick={()=>showSupport(index)} style={{cursor:'pointer'}}>{t('选择支援卡')}</span>
               </div>
-            </div>
-            :<Button key={index} style={{width:'31%', height:'50%',borderRadius:16}} onClick={()=>showSupport(index)}>{t('选择支援卡')}</Button>
-        )}
-      </div>
+              <ScrollBars  autoHide={true} style={{...pBodyStyle}}>
+                <div style={{display:'flex'}}>
+                  <img style={{width:'26%',height:'39%'}} src={cdnServer+support.imgUrl} alt={support.imgUrl}></img>
+                  <div style={{flex:'1 1 auto'}}>
+                    <EventList eventList={supports[index].eventList} pid={supports[index].id} ></EventList>
+                  </div>
+                </div>
+                <Divider style={{margin:'4px 0',background:'rgba(255,255,255,0.6)'}}>{t("培训技能")}</Divider>
+                <SkillList skillList={supports[index].possessionSkill} isNur={true}></SkillList>
+                <Divider style={{margin:'4px 0',background:'rgba(255,255,255,0.6)'}}>{t("事件技能")}</Divider>
+                <SkillList skillList={supports[index].trainingEventSkill} isNur={true}></SkillList>
+              </ScrollBars>
+            </div>)
+          }else{
+            return (
+              <div key={`s${index}`} style={{...panelStyle}}>
+                <Button onClick={()=>showSupport(index)}>{t('选择支援卡')}</Button>
+              </div>
+            )
+          }
+        })}
 
+    </GridLayout>
       <Modal visible={isPlayerVisible} onOk={closePlayer} onCancel={closePlayer} width={'80%'}>
         <Player onSelect={handleSelectPlayer}></Player>
       </Modal>
       <Modal visible={isSupportVisible} onOk={closeSupport} onCancel={closeSupport} width={'80%'}>
         <Support onSelect={needSelect?handleSelectSupport:null}></Support>
       </Modal>
-    </div>
+    </>
   )
 }
 

@@ -1,13 +1,14 @@
-import React from 'react';
+import React,{useState} from 'react';
+import {useHistory} from 'react-router-dom';
 
-import { Button, Divider, Image, Alert } from "antd";
+import { Button, Divider, Image, Alert,Tooltip,Modal } from "antd";
 import db from '../db.js'
 import t from './t.js'
 
 import {EventList} from './event.js'
-import {SkillList} from './skill.js'
+import {SkillList} from './skill-detail.js'
 import {EffectTable,TestEffectTable} from './effect.js'
-
+const ua = db.get('ua').value();
 const cdnServer = 'https://cdn.jsdelivr.net/gh/wrrwrr111/pretty-derby/public/'
 
 
@@ -35,6 +36,44 @@ const SupportDetail = (props) =>{
     <EffectTable effects={data.effects} rarity={data.rarity}></EffectTable>
   </>)
 }
+const SupportCard = (props)=>{
+  const history = useHistory();
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const support = props.data
 
-export default SupportDetail
+  const showSupportDetail = () => {
+    if(props.onSelect){
+      props.onSelect(props.data)
+    }else{
+      if(ua==='mo'){
+        history.push(`/support-detail/${support.id}`)
+      }else{
+        setIsModalVisible(true);
+      }
+    }
+  };
+
+  const handleOk = () => {
+    setIsModalVisible(false);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
+
+  return (
+    <>
+      <Tooltip title={`${support.name}----${t(support.charaName)}`}>
+        <Image src={cdnServer+support.imgUrl} preview={false}  onClick={showSupportDetail} alt={support.charaName} width={'100%'}></Image>
+      </Tooltip>
+
+      <Modal title={`${support.name}----${t(support.charaName)}`}
+            visible={isModalVisible} onOk={handleOk} onCancel={handleCancel}
+            width={800} destroyOnClose={true}>
+        <SupportDetail supportId={support.id}></SupportDetail>
+      </Modal>
+    </>
+  )
+}
+export {SupportDetail,SupportCard}
 
